@@ -166,7 +166,7 @@ namespace rosic
   INLINE void TeeBeeFilter::setResonance(double newResonance, bool updateCoefficients)
   {
     resonanceRaw    = 0.01 * newResonance;
-    resonanceSkewed = (1.0-exp(-3.0*resonanceRaw)) / (1.0-exp(-3.0));
+    //resonanceSkewed = (1.0-exp(-3.0*resonanceRaw)) / (1.0-exp(-3.0));
     if( updateCoefficients == true )
       calculateCoefficientsApprox4();
   }
@@ -207,7 +207,11 @@ namespace rosic
   {
     // calculate intermediate variables:
     double wc  = twoPiOverSampleRate * cutoff;
-    double wc2 = wc*wc;
+    double wc2 = wc * wc;
+    //double resoAdj = 0.6420885732 * pow(804.5331685812 * cutoff * 2 * PI / (8 * 44100), 0.2463389193) + -0.6083005244;
+    double resoAdj = 0.6420885732 * pow(0.01432831911556 * cutoff, 0.2463389193) + -0.6083005244;
+    resoAdj = resoAdj > 1 ? 1 : resoAdj < 0.25 ? 0.25 : resoAdj;
+    resonanceSkewed = (1.0 - exp(-3.0 * resonanceRaw * resoAdj)) / (1.0 - exp(-3.0));
     double r   = resonanceSkewed;
     double tmp;
 
@@ -267,12 +271,14 @@ namespace rosic
 
   INLINE double TeeBeeFilter::shape(double x)
   {
-    // return tanhApprox(x); // \todo: find some more suitable nonlinearity here
+	  return tanh(x);
+	// ifso: This are some of the previous approximations.
+     //return tanhApprox(x); // \todo: find some more suitable nonlinearity here
     //return x; // test
 
-    const double r6 = 1.0/6.0;
-    x = clip(x, -SQRT2, SQRT2);
-    return x - r6*x*x*x;
+    //const double r6 = 1.0/6.0;
+    //x = clip(x, -SQRT2, SQRT2);
+    //return x - r6*x*x*x;
 
     //return clip(x, -1.0, 1.0);
   }
@@ -283,16 +289,11 @@ namespace rosic
 
     if( mode == TB_303 )
     {
-      //y0  = in - feedbackHighpass.getSample(k * shape(y4));  
-      y0 = in - feedbackHighpass.getSample(k*y4);  
-      //y0  = in - k*shape(y4);  
-      //y0  = in-k*y4;  
-      y1 += 2*b0*(y0-y1+y2);
-      y2 +=   b0*(y1-2*y2+y3);
-      y3 +=   b0*(y2-2*y3+y4);
-      y4 +=   b0*(y3-2*y4);
+        y1 += 2*b0*(in - feedbackHighpass.getSample(k * shape(y4)) - y1 + y2);
+        y2 += b0*(y1 - 2*y2 + y3);
+        y3 += b0*(y2 - 2*y3 + y4);
+        y4 += b0*(y3 - 2*y4);
       return 2*g*y4;
-      //return 3*y4;
     }
 
     // apply drive and feedback to obtain the filter's input signal:
