@@ -10,9 +10,10 @@
 #include "rosic_LeakyIntegrator.h"
 #include "rosic_EllipticQuarterBandFilter.h"
 #include "rosic_AcidSequencer.h"
+#include "AccentEnvelope.h"
 
-#include <list>
-using namespace std; // for the noteList
+//#include <list>
+//using namespace std; // for the noteList
 
 namespace rosic
 {
@@ -38,6 +39,7 @@ namespace rosic
     /** Destructor. */
     ~Open303();
 
+    void reset();
     //-----------------------------------------------------------------------------------------------
     // parameter settings:
 
@@ -55,7 +57,7 @@ namespace rosic
     void setCutoff(double newCutoff); 
 
     /** Sets the resonance amount for the filter. */
-    void setResonance(double newResonance) { filter.setResonance(newResonance); }
+    void setResonance(double newResonance);
 
     /** Sets the modulation depth of the filter's cutoff frequency by the filter-envelope generator 
     (in percent). */
@@ -64,7 +66,7 @@ namespace rosic
     /** Sets the main envelope's decay time for non-accented notes (in milliseconds). 
     Devil Fish provides range of 30...3000 ms for this parameter. On the normal 303, this 
     parameter had a range of 200...2000 ms.  */
-    void setDecay(double newDecay) { normalDecay = newDecay; }
+    void setDecay(double newDecay);
 
     /** Sets the accent (in percent).  */
     void setAccent(double newAccent);
@@ -79,15 +81,15 @@ namespace rosic
     and 100% of the full volume. In the normal 303, this parameter was fixed to zero. */
     void setAmpSustain(double newAmpSustain) { ampEnv.setSustainInDecibels(newAmpSustain); }
 
-    /** Sets the drive (in dB) for the tanh-shaper for 303-square waveform - internal parameter, to 
-    be scrapped eventually. */
-    void setTanhShaperDrive(double newDrive) 
-    { waveTable2.setTanhShaperDriveFor303Square(newDrive); }
+    ///** Sets the drive (in dB) for the tanh-shaper for 303-square waveform - internal parameter, to 
+    //be scrapped eventually. */
+    //void setTanhShaperDrive(double newDrive) 
+    //{ waveTable2.setTanhShaperDriveFor303Square(newDrive); }
 
-    /** Sets the offset (as raw value for the tanh-shaper for 303-square waveform - internal 
-    parameter, to be scrapped eventually. */
-    void setTanhShaperOffset(double newOffset) 
-    { waveTable2.setTanhShaperOffsetFor303Square(newOffset); }
+    ///** Sets the offset (as raw value for the tanh-shaper for 303-square waveform - internal 
+    //parameter, to be scrapped eventually. */
+    //void setTanhShaperOffset(double newOffset) 
+    //{ waveTable2.setTanhShaperOffsetFor303Square(newOffset); }
 
     /** Sets the cutoff frequency for the highpass before the main filter. */
     void setPreFilterHighpass(double newCutoff) { highpass1.setCutoff(newCutoff); }
@@ -98,9 +100,9 @@ namespace rosic
     /** Sets the cutoff frequency for the highpass after the main filter. */
     void setPostFilterHighpass(double newCutoff) { highpass2.setCutoff(newCutoff); }
 
-    /** Sets the phase shift of tanh-shaped square wave with respect to the saw-wave (in degrees)
-    - this is important when the two are mixed. */
-    void setSquarePhaseShift(double newShift) { waveTable2.set303SquarePhaseShift(newShift); }
+    ///** Sets the phase shift of tanh-shaped square wave with respect to the saw-wave (in degrees)
+    //- this is important when the two are mixed. */
+    //void setSquarePhaseShift(double newShift) { waveTable2.set303SquarePhaseShift(newShift); }
 
     /** Sets the slide-time (in ms). The TB-303 had a slide time of 60 ms. */
     void setSlideTime(double newSlideTime);
@@ -110,7 +112,6 @@ namespace rosic
     void setNormalAttack(double newNormalAttack) 
     { 
       normalAttack = newNormalAttack; 
-      rc1.setTimeConstant(normalAttack);
     }
 
     /** Sets the filter envelope's attack time for accented notes (in milliseconds). In the 
@@ -118,7 +119,6 @@ namespace rosic
     void setAccentAttack(double newAccentAttack) 
     { 
       accentAttack = newAccentAttack; 
-      rc2.setTimeConstant(accentAttack);
     }
 
     /** Sets the filter envelope's decay time for accented notes (in milliseconds). 
@@ -173,15 +173,15 @@ namespace rosic
     /** Returns the amplitudes envelope's sustain level (in dB). */
     double getAmpSustain() const { return amp2dB(ampEnv.getSustain()); }
 
-    /** Returns the drive (in dB) for the tanh-shaper for 303-square waveform - internal parameter, 
-    to be scrapped eventually. */
-    double getTanhShaperDrive() const 
-    { return waveTable2.getTanhShaperDriveFor303Square(); }
+    ///** Returns the drive (in dB) for the tanh-shaper for 303-square waveform - internal parameter, 
+    //to be scrapped eventually. */
+    //double getTanhShaperDrive() const 
+    //{ return waveTable2.getTanhShaperDriveFor303Square(); }
 
-    /** Returns the offset (as raw value for the tanh-shaper for 303-square waveform - internal 
-    parameter, to be scrapped eventually. */   
-    double getTanhShaperOffset() const 
-    { return waveTable2.getTanhShaperOffsetFor303Square(); }
+    ///** Returns the offset (as raw value for the tanh-shaper for 303-square waveform - internal 
+    //parameter, to be scrapped eventually. */   
+    //double getTanhShaperOffset() const 
+    //{ return waveTable2.getTanhShaperOffsetFor303Square(); }
 
     /** Returns the cutoff frequency for the highpass before the main filter. */
     double getPreFilterHighpass() const { return highpass1.getCutoff(); }
@@ -193,9 +193,9 @@ namespace rosic
     /** Returns the cutoff frequency for the highpass after the main filter. */
     double getPostFilterHighpass() const { return highpass2.getCutoff(); }
 
-    /** Returns the phase shift of tanh-shaped square wave with respect to the saw-wave (in degrees)
-    - this is important when the two are mixed. */
-    double getSquarePhaseShift() const { return waveTable2.get303SquarePhaseShift(); }
+    ///** Returns the phase shift of tanh-shaped square wave with respect to the saw-wave (in degrees)
+    //- this is important when the two are mixed. */
+    //double getSquarePhaseShift() const { return waveTable2.get303SquarePhaseShift(); }
 
     /** Returns the slide-time (in ms). */
     double getSlideTime() const { return slideTime; }
@@ -240,15 +240,19 @@ namespace rosic
     BlendOscillator           oscillator;
     TeeBeeFilter              filter;
     AnalogEnvelope            ampEnv; 
-    DecayEnvelope             mainEnv;
+    //DecayEnvelope             mainEnv;
+    FilterDecay               filterEnv;
     LeakyIntegrator           pitchSlewLimiter;
     //LeakyIntegrator           ampDeClicker;
     BiquadFilter              ampDeClicker;
-    LeakyIntegrator           rc1, rc2;
     OnePoleFilter             highpass1, highpass2, allpass; 
     BiquadFilter              notch;
     EllipticQuarterBandFilter antiAliasFilter;
     AcidSequencer             sequencer;
+    AccentEnvelope            accentEnv;
+    // Accent: https://www.firstpr.com.au/rwi/dfish/303-unique.html
+
+    bool filterIn = false;
 
   protected:
 
@@ -269,14 +273,6 @@ namespace rosic
 
     void calculateEnvModScalerAndOffset();
 
-    /** Updates the normalizer n1 according to the time-constant of rc1 and the decay-time of the
-    main envelope generator. */
-    void updateNormalizer1();
-
-    /** Updates the normalizer n2 according to the time-constant of rc2 and the decay-time of the
-    main envelope generator. */
-    void updateNormalizer2();
-
     static const int oversampling = 4;
 
     double tuning;           // master tunung for A4 in Hz
@@ -292,6 +288,7 @@ namespace rosic
     double envUpFraction;    // fraction of the envelope that goes upward
     double envOffset;        // offset for the normalized envelope ('bipolarity' parameter)
     double envScaler;        // scale-factor for the normalized envelope (derived from envMod)
+    double envCutoffMul;    // scale factor for (start) cutoff.
     double normalAttack;     // attack time for the filter envelope on non-accented notes
     double accentAttack;     // attack time for the filter envelope on accented notes
     double normalDecay;      // decay time for the filter envelope on non-accented notes
@@ -300,15 +297,14 @@ namespace rosic
     double accentAmpRelease; // amp-env release time for accented notes
     double accentGain;       // between 0.0...1.0 - to scale the 3rd amp-envelope on accents
     double pitchWheelFactor; // scale factor for oscillator frequency from pitch-wheel
-    double n1, n2;           // normalizers for the RCs that are driven by the MEG
     int    currentNote;      // note which is currently played (-1 if none)
     int    currentVel;       // velocity of currently played note
     int    noteOffCountDown; // a countdown variable till next note-off in sequencer mode
     bool   slideToNextNote;  // indicate that we need to slide to the next note in sequencer mode
     bool   idle;             // flag to indicate that we have currently nothing to do in getSample
+    bool   curNoteHasAccent; // flag whether the active note has accent
 
-    list<MidiNoteEvent> noteList;
-
+    MidiNoteList noteList;
   };
 
   //-------------------------------------------------------------------------------------------------
@@ -318,6 +314,7 @@ namespace rosic
   {
     //if( sequencer.getSequencerMode() == AcidSequencer::OFF && ampEnv.endIsReached() )
     //  return 0.0;
+
     if( idle )
       return 0.0;
 
@@ -356,55 +353,43 @@ namespace rosic
       }
     }
 
-    // calculate instantaneous oscillator frequency and set up the oscillator:
     double instFreq = pitchSlewLimiter.getSample(oscFreq);
-    oscillator.setFrequency(instFreq*pitchWheelFactor);
+    oscillator.setFrequency(instFreq * pitchWheelFactor);
     oscillator.calculateIncrement();
 
-    // calculate instantaneous cutoff frequency from the nominal cutoff and all its modifiers and 
-    // set up the filter:
-    double mainEnvOut = mainEnv.getSample();
-    double tmp1       = n1 * rc1.getSample(mainEnvOut);
-    double tmp2       = 0.0;
-    if( accentGain > 0.0 )
-      tmp2 = mainEnvOut;
-    tmp2 = n2 * rc2.getSample(tmp2);  
-    tmp1 = envScaler * ( tmp1 - envOffset );  // seems not to work yet
-    tmp2 = accentGain*tmp2;
-    double instCutoff = cutoff * pow(2.0, tmp1+tmp2);
+    double filterEnvVal = filterEnv.getSample();
+    accentEnv.tick(filterEnvVal, curNoteHasAccent);
+    double accentCutoffShift = accentEnv.getCutoffShift();
+    double instCutoff = cutoff * envCutoffMul * accentCutoffShift * exp(envScaler * filterEnvVal);
     filter.setCutoff(instCutoff);
 
     double ampEnvOut = ampEnv.getSample();
-    //ampEnvOut += 0.45*filterEnvOut + accentGain*6.8*filterEnvOut; 
-    if( ampEnv.isNoteOn() )
-      ampEnvOut += 0.45*mainEnvOut + accentGain*4.0*mainEnvOut; 
-    ampEnvOut = ampDeClicker.getSample(ampEnvOut);
-
-    // oversampled calculations:
-    double tmp;
-    for(int i=1; i<=oversampling; i++)
+    if (ampEnv.isNoteOn())
     {
-      tmp  = -oscillator.getSample();         // the raw oscillator signal 
-      tmp  = highpass1.getSample(tmp);        // pre-filter highpass
-      tmp  = filter.getSample(tmp);           // now it's filtered
-      tmp  = antiAliasFilter.getSample(tmp);  // anti-aliasing filtered
-
+        double accExtraGain = accentEnv.getAccentVCABoost();
+        ampEnvOut *= accExtraGain;
     }
 
-    // these filters may actually operate without oversampling (but only if we reset them in
-    // triggerNote - avoid clicks)
-    tmp  = allpass.getSample(tmp);
-    tmp  = highpass2.getSample(tmp);        
-    tmp  = notch.getSample(tmp);
+    ampEnvOut = ampDeClicker.getSample(ampEnvOut);
+
+    double tmp = 0.;
+
+    for (int os = 1; os <= oversampling; ++os)
+    {
+        tmp = -oscillator.getSample();
+        tmp = highpass1.getSample(tmp);
+        tmp = filter.getSample(tmp);
+        tmp = antiAliasFilter.getSample(tmp);
+    }
+
+    tmp = allpass.getSample(tmp);
+    tmp = highpass2.getSample(tmp);
+    tmp = notch.getSample(tmp);
     tmp *= ampEnvOut;                       // amplified
     tmp *= ampScaler;
 
-    // find out whether we may switch ourselves off for the next call:
-    idle = false;
-    //idle = (sequencer.getSequencerMode() == AcidSequencer::OFF && ampEnv.endIsReached() 
-    //        && fabs(tmp) < 0.000001); // ampEnvOut < 0.000001;
-
     return tmp;
+
   }
 
 }

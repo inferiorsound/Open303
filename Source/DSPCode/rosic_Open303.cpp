@@ -29,6 +29,7 @@ Open303::Open303()
   noteOffCountDown =     0;
   slideToNextNote  = false;
   idle             = true;
+  curNoteHasAccent = false;
 
   setEnvMod(25.0);
 
@@ -38,7 +39,7 @@ Open303::Open303()
   oscillator.setWaveForm2(MipMappedWaveTable::SQUARE303);
 
   //mainEnv.setNormalizeSum(true);
-  mainEnv.setNormalizeSum(false);
+  //mainEnv.setNormalizeSum(false);
 
   ampEnv.setAttack(0.0);
   ampEnv.setDecay(1230.0);
@@ -51,9 +52,6 @@ Open303::Open303()
   ampDeClicker.setMode(BiquadFilter::LOWPASS12);
   ampDeClicker.setGain( amp2dB(sqrt(0.5)) );
   ampDeClicker.setFrequency(200.0);
-
-  rc1.setTimeConstant(0.0);
-  rc2.setTimeConstant(15.0);
 
   highpass1.setMode(OnePoleFilter::HIGHPASS);
   highpass2.setMode(OnePoleFilter::HIGHPASS);
@@ -78,19 +76,32 @@ Open303::~Open303()
 
 }
 
+void Open303::reset()
+{
+    allNotesOff();
+    oscillator.resetPhase();
+    filter.reset();
+    highpass1.reset();
+    highpass2.reset();
+    allpass.reset();
+    notch.reset();
+    antiAliasFilter.reset();
+    ampDeClicker.reset();
+}
+
 //-------------------------------------------------------------------------------------------------
 // parameter settings:
 
 void Open303::setSampleRate(double newSampleRate)
 {
-  mainEnv.setSampleRate         (       newSampleRate);
+  //mainEnv.setSampleRate         (       newSampleRate);
   ampEnv.setSampleRate          (       newSampleRate);
   pitchSlewLimiter.setSampleRate((float)newSampleRate);
   ampDeClicker.setSampleRate(    (float)newSampleRate);
-  rc1.setSampleRate(             (float)newSampleRate);
-  rc2.setSampleRate(             (float)newSampleRate);
+  filterEnv.setSampleRate        (      newSampleRate);
+  accentEnv.setSampleRate        (      newSampleRate);
   sequencer.setSampleRate(              newSampleRate);
-
+  
   highpass2.setSampleRate     (         newSampleRate);
   allpass.setSampleRate       (         newSampleRate);
   notch.setSampleRate         (         newSampleRate);
@@ -107,15 +118,28 @@ void Open303::setCutoff(double newCutoff)
   calculateEnvModScalerAndOffset();
 }
 
+void Open303::setResonance(double newResonance) 
+{
+    filter.setResonance(newResonance); 
+    accentEnv.setResonance(0.01 * newResonance);
+}
+
 void Open303::setEnvMod(double newEnvMod)
 {
   envMod = newEnvMod;
   calculateEnvModScalerAndOffset();
 }
+void Open303::setDecay(double newDecay)
+{
+    normalDecay = newDecay; 
+    setMainEnvDecay(curNoteHasAccent ? accentDecay : normalDecay);
+}
+
 
 void Open303::setAccent(double newAccent)
 {
   accent = 0.01 * newAccent;
+  accentEnv.setAccent(accent);
 }
 
 void Open303::setVolume(double newLevel)
@@ -141,7 +165,7 @@ void Open303::setPitchBend(double newPitchBend)
 //------------------------------------------------------------------------------------------------------------
 // others:
 
-void Open303::noteOn(int noteNumber, int velocity, double detune)
+void Open303::noteOn(int noteNumber, int velocity, double /*detune*/)
 {
   if( sequencer.modeWasChanged() )
     allNotesOff();
@@ -225,22 +249,24 @@ void Open303::triggerNote(int noteNumber, bool hasAccent)
     ampDeClicker.reset();
   }
 
+  curNoteHasAccent = hasAccent;
+  setMainEnvDecay(curNoteHasAccent ? accentDecay : normalDecay);
+
   if( hasAccent )
   {
     accentGain = accent;
-    setMainEnvDecay(accentDecay);
     ampEnv.setRelease(accentAmpRelease);
   }
   else
   {
     accentGain = 0.0;
-    setMainEnvDecay(normalDecay);
     ampEnv.setRelease(normalAmpRelease);
   }
 
   oscFreq = pitchToFreq(noteNumber, tuning);
   pitchSlewLimiter.setState(oscFreq);
-  mainEnv.trigger();
+  //mainEnv.trigger();
+  filterEnv.trigger();
   ampEnv.noteOn(true, noteNumber, 64);
   idle = false;
 }
@@ -248,17 +274,17 @@ void Open303::triggerNote(int noteNumber, bool hasAccent)
 void Open303::slideToNote(int noteNumber, bool hasAccent)
 {
   oscFreq = pitchToFreq(noteNumber, tuning);
+  curNoteHasAccent = hasAccent;
+  setMainEnvDecay(curNoteHasAccent ? accentDecay : normalDecay);
 
   if( hasAccent )
   {
     accentGain = accent;
-    setMainEnvDecay(accentDecay);
     ampEnv.setRelease(accentAmpRelease);
   }
   else
   {
     accentGain = 0.0;
-    setMainEnvDecay(normalDecay);
     ampEnv.setRelease(normalAmpRelease);
   }
   idle = false;
@@ -283,56 +309,41 @@ void Open303::releaseNote(int noteNumber)
 
 void Open303::setMainEnvDecay(double newDecay)
 {
-  mainEnv.setDecayTimeConstant(newDecay);
-  updateNormalizer1();
-  updateNormalizer2();
+  //mainEnv.setDecayTimeConstant(newDecay);
+  filterEnv.setDecay(newDecay);
 }
 
 void Open303::calculateEnvModScalerAndOffset()
 {
-  bool useMeasuredMapping = true; // might be shown as user parameter later
-  if( useMeasuredMapping == true )
-  {
-    // define some constants that arise from the measurements:
-    const double c0   = 3.138152786059267e+002;  // lowest nominal cutoff
-    const double c1   = 2.394411986817546e+003;  // highest nominal cutoff
-    const double oF   = 0.048292930943553;       // factor in line equation for offset
-    const double oC   = 0.294391201442418;       // constant in line equation for offset
-    const double sLoF = 3.773996325111173;       // factor in line eq. for scaler at low cutoff
-    const double sLoC = 0.736965594166206;       // constant in line eq. for scaler at low cutoff
-    const double sHiF = 4.194548788411135;       // factor in line eq. for scaler at high cutoff
-    const double sHiC = 0.864344900642434;       // constant in line eq. for scaler at high cutoff
+    const auto envNorm = 0.01 * envMod;
+    const auto envNorm2 = envNorm * envNorm;
+    const auto envNorm3 = envNorm2 * envNorm;
 
-    // do the calculation of the scaler and offset:
-    double e   = linToLin(envMod, 0.0, 100.0, 0.0, 1.0);
-    double c   = expToLin(cutoff, c0,   c1,   0.0, 1.0);
-    double sLo = sLoF*e + sLoC;
-    double sHi = sHiF*e + sHiC;
-    envScaler  = (1-c)*sLo + c*sHi;
-    envOffset  =  oF*c + oC;
-  }
-  else
+    envScaler = 0.59557 + 0.67478 * envNorm + -1.1315 * envNorm2 + 3.4667 * envNorm3;
+
+    {
+        const double xMin = 0.4;
+        const double xMax = 0.6;
+        const double env2 = envNorm * envNorm;
+        const double env3 = env2 * envNorm;
+        const double env4 = env2 * env2;
+        const double env5 = env2 * env3;
+        double mul = 0.145833 + 0.0883333 * envNorm;
+        const double mulB = -1.34397375416667 + 9.68250321250000 * envNorm - 19.789179675 * env2 + 10.1642836167 * env3 + 9.44317705 * env4 - 7.1567059125 * env5;
+
+        if (envNorm > xMax)
   {
-    double upRatio   = pitchOffsetToFreqFactor(      envUpFraction *envMod);
-    double downRatio = pitchOffsetToFreqFactor(-(1.0-envUpFraction)*envMod);
-    envScaler        = upRatio - downRatio;
-    if( envScaler != 0.0 ) // avoid division by zero
-      envOffset = - (downRatio - 1.0) / (upRatio - downRatio);
-    else
-      envOffset = 0.0;
+            mul = mulB;
   }
+        else if (envNorm >= xMin)
+  {
+            const double fade = (envNorm - xMin) / (xMax - xMin);
+            mul = mulB * fade + mul * (1 - fade);
+  }
+
+        envCutoffMul = mul / exp(envScaler);
 }
 
-void Open303::updateNormalizer1()
-{
-  n1 = LeakyIntegrator::getNormalizer(mainEnv.getDecayTimeConstant(), rc1.getTimeConstant(),
-    sampleRate);
-  n1 = 1.0; // test
-}
 
-void Open303::updateNormalizer2()
-{
-  n2 = LeakyIntegrator::getNormalizer(mainEnv.getDecayTimeConstant(), rc2.getTimeConstant(),
-    sampleRate);
-  n2 = 1.0; // test
+    //envCutoffMul
 }
