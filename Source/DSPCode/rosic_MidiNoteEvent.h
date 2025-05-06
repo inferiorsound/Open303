@@ -1,5 +1,6 @@
 #ifndef rosic_MidiNoteEvent_h
 #define rosic_MidiNoteEvent_h
+#include <vector>
 
 namespace rosic
 {
@@ -77,6 +78,73 @@ namespace rosic
     int    priority;  // a priority value
 
   };
+
+
+  class MidiNoteList
+  {
+  public:
+
+      MidiNoteList()
+          : notes(128)
+      {
+      }
+
+      void clear()
+      {
+          index = -1;
+      }
+
+      bool empty() const
+      {
+          return index < 0;
+      }
+
+      MidiNoteEvent& front()
+      {
+          return index >= 0 ? notes[index] : notes[0];
+      }
+
+      void push_front(MidiNoteEvent& m)
+      {
+          if (index > static_cast<int> (notes.size()) - 2)
+              shiftNotesFrom(0);
+
+          ++index;
+          notes[index] = m;
+      }
+      
+      void remove(const MidiNoteEvent& m)
+      {
+          const auto pos = getIndexOf(m);
+          shiftNotesFrom(pos);
+      }
+
+  private:
+
+      int getIndexOf(const MidiNoteEvent& m)
+      {
+          for (int i = 0; i <= index; ++i)
+              if (notes[i].getKey() == m.getKey())
+                  return i;
+
+          return -1;
+      }
+
+      void shiftNotesFrom(int start)
+      {
+          if (start < 0 || start > index)
+              return;
+
+          for (int i = start; i < index; ++i)
+              notes[i] = notes[i + 1];
+
+          --index;
+      }
+
+      std::vector<MidiNoteEvent> notes;
+      int index = -1;
+  };
+
 
 } // end namespace rosic
 
