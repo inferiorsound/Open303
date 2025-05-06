@@ -1,5 +1,25 @@
 #include "rosic_FourierTransformerRadix2.h"
+
+
+
+#if _MSC_VER
+#pragma warning (push)
+#pragma warning (disable:4210)
+#endif
+#ifdef __cplusplus
+extern "C" {
+#endif
+
 #include "fft4g.c"
+
+#ifdef __cplusplus
+} // extern "C"
+#endif
+
+#if _MSC_VER
+#pragma warning (pop)
+#endif
+
 using namespace rosic;
 
 //-------------------------------------------------------------------------------------------------
