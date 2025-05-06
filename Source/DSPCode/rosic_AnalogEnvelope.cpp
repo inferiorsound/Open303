@@ -24,6 +24,7 @@ AnalogEnvelope::AnalogEnvelope()
   increment      = 1000.0*timeScale/sampleRate;
   tauScale       = 1.0;
   peakScale      = 1.0;
+  outputOffset   = 0.01;
   noteIsOn       = false;
   outputIsZero   = true;
 
@@ -141,6 +142,12 @@ void AnalogEnvelope::setPeakScale(double newPeakScale)
     peakScale = newPeakScale;
 }
 
+void AnalogEnvelope::setOutputOffset(double newOutputOffset)
+{
+    outputOffset = newOutputOffset;
+}
+
+
 //-------------------------------------------------------------------------------------------------
 // others:
 
@@ -174,12 +181,7 @@ void AnalogEnvelope::noteOff()
 
 bool AnalogEnvelope::endIsReached()
 {
-  //return false; // test
-
-  if( noteIsOn == false && previousOutput < 0.000001 )
-    return true;
-  else
-    return false;
+    return previousOutput < 2e-8;
 }
 
 //-------------------------------------------------------------------------------------------------

@@ -116,6 +116,9 @@ namespace rosic
     /** Scales the peak-value of the envelope - useful for velocity response. */
     void setPeakScale(double newPeakScale); 
 
+    /** Sets a linear output offset resulting in a steeper fadeout at the end. */
+    void setOutputOffset(double newOutputOffset);
+
     /** Sets the internal state of the RC-filter. */
     void setInternalState(double newState) { previousOutput = newState; }
 
@@ -178,6 +181,7 @@ namespace rosic
     double increment;  // increment for the time variable per sample 
     double tauScale;   // scale factor for the time constants of the filters
     double peakScale;  // scale factor for the peak-value
+    double outputOffset;
 
     double attackCoeff,  decayCoeff, releaseCoeff;   // filter coefficients
     double previousOutput;                           // previous output sample
@@ -225,6 +229,15 @@ namespace rosic
 
     // store output sample for next call:
     previousOutput = out; // + TINY;  // TINY is to avoid denorm problems
+
+    // analog envelope can have an offset resulting in faster fade-out after initial decay
+    out -= outputOffset;
+    
+    if (out < 1e-9)
+    {
+        out = 1e-9;
+        previousOutput = 1e-9 - 1e-10;
+    }
 
     return out;
   }
