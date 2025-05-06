@@ -121,18 +121,8 @@ namespace rosic
 
   INLINE void sinCos(double x, double* sinResult, double* cosResult)
   {
-    #if defined __GNUC__ || defined _WIN64 // \todo assembly-version causes compiler errors on gcc
       *sinResult = sin(x);
       *cosResult = cos(x);
-    #else
-      double s, c;     // do we need these intermediate variables?
-      __asm fld x
-      __asm fsincos
-      __asm fstp c
-      __asm fstp s
-      *sinResult = s;
-      *cosResult = c;
-    #endif
   }
 
   INLINE void sinCosApprox(double x, double* sinResult, double* cosResult)
