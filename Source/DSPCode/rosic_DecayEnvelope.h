@@ -14,6 +14,64 @@ namespace rosic
 
   */
 
+class FilterDecay
+{
+public:
+
+    FilterDecay()
+    {
+        setAttack(0.1);
+        setDecay(500.);
+    }
+
+    void trigger()
+    {
+        value = 1.;
+    }
+
+    void setSampleRate(double newSampleRate)
+    {
+        sampleRate = newSampleRate;
+        calculateCoefficient();
+    }
+
+    void setAttack(double attackMs)
+    {
+        attack = attackMs;
+        calculateCoefficient();
+    }
+
+    void setDecay(double decayMs)
+    {
+        decay = decayMs;
+        calculateCoefficient();
+    }
+
+    INLINE double getSample()
+    {
+        value *= c;
+        valAttack += a * (value - valAttack);
+        return valAttack;
+    }
+
+private:
+
+
+    void calculateCoefficient()
+    {
+        a = 1. - exp(-1. / (0.001 * attack * sampleRate));
+        c = exp(-1. / (0.001 * decay * sampleRate));
+    }
+
+    double sampleRate = 44100.;
+    double value = 0.;
+    double valAttack = 0.;
+    double decay = 362.;
+    double attack = 3.f;
+    double c = 1.f;
+    double a = 0.;
+};
+
   class DecayEnvelope
   {
 
