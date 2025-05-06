@@ -2,7 +2,14 @@
 using namespace rosic;
 
 MipMappedWaveTable::MipMappedWaveTable()
+    : prototypeTableData(tableLength+4)
+    , tableSetData(numTables*(tableLength + 4))
+    , spectrum(tableLength)
 {
+    prototypeTable = prototypeTableData.data();
+    for (int i = 0; i < numTables; ++i)
+        tableSet[i] = tableSetData.data() + (i * (tableLength + 4));
+
   // init member variables:
   sampleRate = 44100.0;
   waveform   = 0;
@@ -29,22 +36,22 @@ MipMappedWaveTable::~MipMappedWaveTable()
 //-------------------------------------------------------------------------------------------------
 // parameter settings:
 
-void MipMappedWaveTable::setWaveform(double* newWaveForm, int lengthInSamples)
-{
-  int i;
-  if( lengthInSamples == tableLength )
-  {
-    // just copy the values into the internal buffer, when the length of the passed table and the
-    // internal table match:
-    for( i=0; i<tableLength; i++ )
-      prototypeTable[i] = newWaveForm[i];
-  }
-  else
-  {
-    // implement periodic sinc-interpolation here...
-  }
-  generateMipMap();
-}
+//void MipMappedWaveTable::setWaveform(double* newWaveForm, int lengthInSamples)
+//{
+//  int i;
+//  if( lengthInSamples == tableLength )
+//  {
+//    // just copy the values into the internal buffer, when the length of the passed table and the
+//    // internal table match:
+//    for( i=0; i<tableLength; i++ )
+//      prototypeTable[i] = newWaveForm[i];
+//  }
+//  else
+//  {
+//    // implement periodic sinc-interpolation here...
+//  }
+//  generateMipMap();
+//}
 
 void MipMappedWaveTable::setWaveform(int newWaveform)
 {
@@ -107,17 +114,17 @@ void MipMappedWaveTable::normalize()
     prototypeTable[i] *= scale;
 }
 
-void MipMappedWaveTable::reverseTime()
-{
-  int    i;
-  double tmpTable[tableLength+4];
-
-  for(i=0; i<tableLength; i++)
-    tmpTable[i] = prototypeTable[tableLength-i-1];
-
-  for(i=0; i<tableLength; i++)
-    prototypeTable[i] = tmpTable[i];
-}
+//void MipMappedWaveTable::reverseTime()
+//{
+//  int    i;
+//  double tmpTable[tableLength+4];
+//
+//  for(i=0; i<tableLength; i++)
+//    tmpTable[i] = prototypeTable[tableLength-i-1];
+//
+//  for(i=0; i<tableLength; i++)
+//    prototypeTable[i] = tmpTable[i];
+//}
 
 void MipMappedWaveTable::renderWaveform()
 {
@@ -136,9 +143,9 @@ void MipMappedWaveTable::renderWaveform()
 
 void MipMappedWaveTable::generateMipMap()
 {
-  static double spectrum[tableLength];
+  //static double spectrum[tableLength];
   //static int    position, offset;
-  static int t, i; // indices for the table and position
+  //int t, i; // indices for the table and position
 
   //position = 0;             // begin of the 1st table (index 0)
   //offset   = tableLength+4; // offset between tow tables, the 4 is the number
@@ -146,8 +153,8 @@ void MipMappedWaveTable::generateMipMap()
 
   // copy the prototypeTable into the 1st table of the mipmap (this actually makes the
   // prototypeTable redundant - room for optimization here):
-  t = 0;
-  for(i=0; i<tableLength; i++)
+  int t = 0;
+  for(int i=0; i<tableLength; i++)
     tableSet[0][i] = prototypeTable[i];
 
   // additional sample(s) for the interpolator:
@@ -157,7 +164,7 @@ void MipMappedWaveTable::generateMipMap()
   tableSet[t][tableLength+3] = tableSet[t][3];
 
   // get the spectrum from the prototype-table:
-  fourierTransformer.transformRealSignal(prototypeTable, spectrum);
+  fourierTransformer.transformRealSignal(prototypeTable, spectrum.data());
 
   // ensure that DC and Nyquist are zero:
   spectrum[0] = 0.0;
@@ -173,12 +180,12 @@ void MipMappedWaveTable::generateMipMap()
     // spectrum is currently still nonzero
 
     // zero out the bins above the cutoff-bin:
-    for(i=lowBin; i<highBin; i++)
+    for(int i=lowBin; i<highBin; i++)
       spectrum[i] = 0.0;
 
     // transform the truncated spectrum back to the time-domain and store it in
     // the tableSet
-    fourierTransformer.transformSymmetricSpectrum(spectrum, tableSet[t]);
+    fourierTransformer.transformSymmetricSpectrum(spectrum.data(), tableSet[t]);
 
     // additional sample(s) for the interpolator:
     tableSet[t][tableLength]   = tableSet[t][0];

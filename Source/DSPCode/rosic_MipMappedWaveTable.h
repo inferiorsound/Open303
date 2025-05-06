@@ -4,6 +4,7 @@
 // rosic-indcludes:
 #include "rosic_FunctionTemplates.h"
 #include "rosic_FourierTransformerRadix2.h"
+#include <vector>
 
 namespace rosic
 {
@@ -61,7 +62,7 @@ namespace rosic
     FFT/iFFT.
     \todo: Interpolation for the case that lengthInSamples does not match the length of the 
     internal table-length. */
-    void setWaveform(double* newWaveform, int lengthInSamples);
+    //void setWaveform(double* newWaveform, int lengthInSamples);
 
     /** Sets the time symmetry between the first and second half-wave (as value between 0...1) - 
     for a square wave, this is also known as pulse-width. Currently only implemented for square and 
@@ -139,7 +140,7 @@ namespace rosic
     void normalize();
       // normalizes the amplitude of the prototype-table to 1.0
 
-    void reverseTime();
+    //void reverseTime();
       // time-reverses the prototype-table
 
     /** Renders the prototype waveform and generates the mip-map from that. */
@@ -166,19 +167,23 @@ namespace rosic
     int    waveform;   // index of the currently chosen native waveform
     double sampleRate; // the sampleRate
 
-    double prototypeTable[tableLength];
+    std::vector<double> prototypeTableData;
+    double* prototypeTable/*[tableLength]*/ = nullptr;
       // this is the prototype-table with full bandwidth. one additional sample (same as 
       // prototypeTable[0]) for linear interpolation without need for table wraparound at the last 
       // sample (-> saves one if-statement each audio-cycle) ...and a three further addtional 
       // samples for more elaborate interpolations like cubic (not implemented yet, also:
       // the fillWith...()-functions don't support these samples yet). */
 
-    double tableSet[numTables][tableLength+4];
+    std::vector<double> tableSetData;
+    double* tableSet[numTables]/*[tableLength+4]*/;
       // The multisample for anti-aliased waveform generation. The 4 additional values are equal 
       // to the first 4 values in the table for easier interpolation. The first index is for the 
       // table-number - index 0 accesses the first version which has full bandwidth, index 1 
       // accesses the second version which is bandlimited to Nyquist/2, 2->Nyquist/4, 
       // 3->Nyquist/8, etc. */
+
+    std::vector<double> spectrum;
 
     // embedded objects:
     FourierTransformerRadix2 fourierTransformer;
